@@ -49,7 +49,7 @@ reviews_detail: Full review breakdown: platform, count, rating, any notable them
 Respond ONLY valid JSON no markdown:
 {"score":<1-10>,"verdict":"<PURSUE|MAYBE|SKIP>","running_ads":<true|false|null>,"ads_to_homepage":<true|false|null>,"review_count":"<short e.g. 47 reviews 4.8★>","reviews_detail":"<full breakdown>","follow_up_system":"<visible|weak|none|unknown>","problem_angle":"<2 sentences max>","your_fix":[{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"}],"opening_line":"<2 sentences max>","skip_reason":"<if SKIP else empty>"}`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/audit", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
     body: JSON.stringify({
