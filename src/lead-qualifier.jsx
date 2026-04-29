@@ -14,7 +14,7 @@ function checkIcon(v) { return v === true ? "✅" : v === false ? "❌" : "❓";
 function parseSpreadsheet(text) {
   return text.trim().split("\n").map(line => {
     const parts = line.split(/\t|,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(p => p.trim().replace(/^"|"$/g, ""));
-    return { id: Date.now() + Math.random(), name: parts[0] || "", url: parts[1] || "" };
+    return { id: Date.now() + Math.random(), name: parts[0] || "", url: parts[1] || "", email: parts[2] || "" };
   }).filter(r => r.name);
 }
 
@@ -49,7 +49,7 @@ reviews_detail: Full review breakdown: platform, count, rating, any notable them
 Respond ONLY valid JSON no markdown:
 {"score":<1-10>,"verdict":"<PURSUE|MAYBE|SKIP>","running_ads":<true|false|null>,"ads_to_homepage":<true|false|null>,"review_count":"<short e.g. 47 reviews 4.8★>","reviews_detail":"<full breakdown>","follow_up_system":"<visible|weak|none|unknown>","problem_angle":"<2 sentences max>","your_fix":[{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"}],"opening_line":"<2 sentences max>","skip_reason":"<if SKIP else empty>"}`;
 
-  const res = await fetch("/api/audit", {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
     body: JSON.stringify({
@@ -472,6 +472,7 @@ export default function App() {
   const [tab, setTab] = useState("manual"); // manual | paste
   const [nameInput, setNameInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [leads, setLeads] = useState([]);
   const [results, setResults] = useState([]);
@@ -538,8 +539,8 @@ export default function App() {
 
   function addLead() {
     if (!nameInput.trim()) return;
-    setLeads(p => [...p, { id: Date.now(), name: nameInput.trim(), url: urlInput.trim() }]);
-    setNameInput(""); setUrlInput("");
+    setLeads(p => [...p, { id: Date.now(), name: nameInput.trim(), url: urlInput.trim(), email: emailInput.trim() }]);
+    setNameInput(""); setUrlInput(""); setEmailInput("");
   }
 
   function removeLead(id) { setLeads(p => p.filter(l => l.id !== id)); }
@@ -811,7 +812,11 @@ export default function App() {
                 </div>
                 <div style={{ flex: 1.5, minWidth: 160 }}>
                   <label style={cs.label}>Website or Social URL</label>
-                  <input id="uf" style={cs.input} value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addLead()} placeholder="smithroofing.com or @handle" />
+                  <input id="uf" style={cs.input} value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === "Enter" && document.getElementById("ef").focus()} placeholder="smithroofing.com or @handle" />
+                </div>
+                <div style={{ flex: 1.5, minWidth: 160 }}>
+                  <label style={cs.label}>Email</label>
+                  <input id="ef" style={cs.input} value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addLead()} placeholder="owner@smithroofing.com" />
                 </div>
                 <div style={{ display: "flex", alignItems: "flex-end" }}>
                   <button onClick={addLead} style={{ background: "none", border: `1px dashed ${COLORS.border}`, color: COLORS.muted, fontFamily: "inherit", fontSize: 12, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" }}>+ Add</button>
@@ -822,11 +827,11 @@ export default function App() {
 
           {tab === "paste" && (
             <div style={{ marginBottom: 12 }}>
-              <label style={cs.label}>Paste from spreadsheet (Name in col A, URL in col B)</label>
+              <label style={cs.label}>Paste from spreadsheet (Name · URL · Email — one per line)</label>
               <textarea
                 value={pasteText}
                 onChange={e => setPasteText(e.target.value)}
-                placeholder={"Smith Roofing Co.\tsmithroofing.com\nJones Roofing\tjonesroofing.com\n..."}
+                placeholder={"Smith Roofing Co.\tsmithroofing.com\towner@smithroofing.com\nJones Roofing\tjonesroofing.com\towner@jonesroofing.com\n..."}
                 style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, color: COLORS.text, fontFamily: "inherit", fontSize: 12, padding: "10px 12px", outline: "none", resize: "vertical", minHeight: 120, marginBottom: 10 }}
               />
               <button onClick={parsePaste} disabled={!pasteText.trim()} style={{ background: COLORS.accent, color: "#000", border: "none", fontFamily: "inherit", fontWeight: 700, fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", padding: "9px 18px", cursor: pasteText.trim() ? "pointer" : "not-allowed", opacity: pasteText.trim() ? 1 : 0.4 }}>
@@ -872,19 +877,16 @@ export default function App() {
               onClick={() => {
                 const rows = done.filter(e => e.result && e.result.verdict !== "SKIP");
                 if (rows.length === 0) return;
-                const headers = ["first_name", "company", "email", "subject_line", "specific_problem", "opener", "chain_sentence", "fix_1", "fix_2", "fix_3"];
+                const headers = ["email", "subject_line", "specific_problem", "opener", "chain_sentence", "fix_1", "fix_2", "fix_3"];
                 const csv = [
                   headers.join(","),
                   ...rows.map(e => {
                     const r = e.result;
-                    const firstName = e.lead.name.split(" ")[0] || e.lead.name;
                     const fixes = r.your_fix || [];
                     const subjectLine = `Found the leak`;
                     const problem = fixes[0]?.tag?.toLowerCase() || "gaps in your current funnel";
                     const chainSentence = buildChainSentence(fixes, e.lead.name);
                     const row = [
-                      firstName,
-                      e.lead.name,
                       e.lead.email || "",
                       subjectLine,
                       problem,
