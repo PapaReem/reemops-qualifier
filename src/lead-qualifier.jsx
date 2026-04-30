@@ -128,14 +128,14 @@ function getDidntPayEmail(step, firstName, bizName, problem) {
 }
 
 // ─── Result Card ───────────────────────────────────────────────────────────────
-function ResultCard({ entry, index, onRetry, onSaveNote, onCopy, copied }) {
+function ResultCard({ entry, index, onRetry, onSaveNote, onCopy, onDelete, onSaveFollowupStep, copied }) {
   const { lead, result, error, loading } = entry;
   const [open, setOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [noteText, setNoteText] = useState(entry.note || "");
   const [noteSaved, setNoteSaved] = useState(false);
-  const [noRespStep, setNoRespStep] = useState(0);
-  const [didntPayStep, setDidntPayStep] = useState(0);
+  const [noRespStep, setNoRespStep] = useState(entry.noRespStep || 0);
+  const [didntPayStep, setDidntPayStep] = useState(entry.didntPayStep || 0);
   const [followupEmail, setFollowupEmail] = useState(null);
   const [followupCopied, setFollowupCopied] = useState(false);
 
@@ -150,14 +150,18 @@ function ResultCard({ entry, index, onRetry, onSaveNote, onCopy, copied }) {
     const email = getNoResponseEmail(noRespStep, firstName, bizName, problem);
     if (!email) return;
     setFollowupEmail({ ...email, type: "No Response", step: noRespStep + 1, total: 5 });
-    setNoRespStep(s => s + 1);
+    const next = noRespStep + 1;
+    setNoRespStep(next);
+    onSaveFollowupStep(index, { noRespStep: next, didntPayStep });
   }
 
   function generateDidntPay() {
     const email = getDidntPayEmail(didntPayStep, firstName, bizName, problem);
     if (!email) return;
     setFollowupEmail({ ...email, type: "Didn't Pay", step: didntPayStep + 1, total: 7 });
-    setDidntPayStep(s => s + 1);
+    const next = didntPayStep + 1;
+    setDidntPayStep(next);
+    onSaveFollowupStep(index, { noRespStep, didntPayStep: next });
   }
 
   function copyFollowup() {
@@ -187,7 +191,7 @@ function ResultCard({ entry, index, onRetry, onSaveNote, onCopy, copied }) {
     <div style={s.card}>
       <div style={{ ...s.header, cursor: "default" }}>
         <div className="spin" style={{ width: 14, height: 14, border: `2px solid ${COLORS.border}`, borderTopColor: COLORS.accent, borderRadius: "50%", flexShrink: 0 }} />
-        <span style={{ fontSize: 13, color: COLORS.muted }}>Auditing <strong style={{ color: COLORS.text }}>{lead.name}</strong>…</span>
+        <span style={{ fontSize: 13, color: COLORS.muted }}>Auditing <strong style={{ color: COLORS.text }}>{lead.name}</strong>… <span style={{ color: COLORS.muted, fontSize: 11 }}>(this may take 10-20s)</span></span>
       </div>
     </div>
   );
@@ -199,6 +203,7 @@ function ResultCard({ entry, index, onRetry, onSaveNote, onCopy, copied }) {
         <span style={{ flex: 1, fontSize: 14, fontWeight: 700 }}>{lead.name}</span>
         <span style={{ fontSize: 10, padding: "3px 10px", border: `1px solid ${COLORS.red}`, color: COLORS.red, letterSpacing: "0.1em", textTransform: "uppercase" }}>Error</span>
         <button onClick={() => onRetry(index)} style={{ background: "none", border: `1px solid ${COLORS.red}`, color: COLORS.red, fontFamily: "inherit", fontSize: 11, padding: "4px 12px", cursor: "pointer" }}>↺ Retry</button>
+        <button onClick={() => onDelete(index)} style={{ background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.muted, fontFamily: "inherit", fontSize: 11, padding: "4px 10px", cursor: "pointer" }}>✕</button>
       </div>
     </div>
   );
@@ -222,6 +227,7 @@ function ResultCard({ entry, index, onRetry, onSaveNote, onCopy, copied }) {
           <span title="Follow-up">{fi}</span>
         </span>
         {entry.note && <span style={{ fontSize: 10, color: COLORS.accent, border: `1px solid rgba(232,255,71,0.3)`, padding: "1px 6px" }}>note</span>}
+        <button onClick={e => { e.stopPropagation(); onDelete(index); }} style={{ background: "none", border: `1px solid ${COLORS.border}`, color: COLORS.muted, fontFamily: "inherit", fontSize: 11, padding: "2px 8px", cursor: "pointer" }}>✕</button>
         <span style={{ fontSize: 14, color: COLORS.muted, marginLeft: 4, display: "inline-block", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
       </div>
 
@@ -559,6 +565,23 @@ export default function App() {
     });
   }
 
+  function deleteResult(index) {
+    setResults(prev => {
+      const u = prev.filter((_, i) => i !== index);
+      persistResults(u, activeBatchIndex);
+      return u;
+    });
+  }
+
+  function saveFollowupStep(index, steps) {
+    setResults(prev => {
+      const u = [...prev];
+      u[index] = { ...u[index], ...steps };
+      persistResults(u, activeBatchIndex);
+      return u;
+    });
+  }
+
   function saveNote(index, note) {
     setResults(prev => {
       const u = [...prev];
@@ -569,23 +592,32 @@ export default function App() {
   }
 
   async function retryResult(index) {
+    await sleep(3000);
     setResults(prev => { const u=[...prev]; u[index]={...u[index],error:false,loading:true}; return u; });
     try {
-      const result = await auditLead(results[index].lead);
+      const result = await auditLead(results[index].lead, useApiKey ? apiKey : "");
       setResults(prev => {
         const u=[...prev];
-        u[index]={lead:results[index].lead,result,error:false,loading:false,note:u[index].note};
+        u[index]={...u[index],lead:results[index].lead,result,error:false,loading:false};
         persistResults(u, activeBatchIndex);
         return u;
       });
     } catch {
       setResults(prev => {
         const u=[...prev];
-        u[index]={lead:results[index].lead,result:null,error:true,loading:false,note:u[index].note};
+        u[index]={...u[index],lead:results[index].lead,result:null,error:true,loading:false};
         persistResults(u, activeBatchIndex);
         return u;
       });
     }
+  }
+
+  function deleteResult(index) {
+    setResults(prev => {
+      const u = prev.filter((_, i) => i !== index);
+      persistResults(u, activeBatchIndex);
+      return u;
+    });
   }
 
   const cancelRef = useRef(false);
@@ -603,7 +635,7 @@ export default function App() {
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  async function auditWithRetry(lead, retries = 3, delay = 4000) {
+  async function auditWithRetry(lead, retries = 3, delay = 8000) {
     for (let i = 0; i < retries; i++) {
       if (cancelRef.current) throw new Error("cancelled");
       try {
@@ -635,7 +667,7 @@ export default function App() {
       const lead = toAudit[i];
       setResults(prev => [...prev, { lead, result: null, error: false, loading: true, note: "" }]);
 
-      if (i > 0) await sleep(i % 5 === 0 ? 8000 : 2500);
+      if (i > 0) await sleep(i % 5 === 0 ? 15000 : 5000);
 
       try {
         const result = await auditWithRetry(lead);
@@ -884,7 +916,8 @@ export default function App() {
                     const r = e.result;
                     const fixes = r.your_fix || [];
                     const subjectLine = `Found the leak`;
-                    const problem = fixes[0]?.tag?.toLowerCase() || "gaps in your current funnel";
+                    const rawProblem = r.problem_angle?.split(".")?.[0]?.replace(/^(Right now,?\s*|Currently,?\s*)/i, "").trim() || "";
+                    const problem = rawProblem || fixes[0]?.tag?.toLowerCase() || "gaps in your current funnel";
                     const chainSentence = buildChainSentence(fixes, e.lead.name);
                     const row = [
                       e.lead.email || "",
@@ -923,6 +956,8 @@ export default function App() {
             onRetry={retryResult}
             onSaveNote={saveNote}
             onCopy={copyText}
+            onDelete={deleteResult}
+            onSaveFollowupStep={saveFollowupStep}
             copied={copied}
           />
         ))}
