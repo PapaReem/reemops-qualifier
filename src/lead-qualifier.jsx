@@ -14,7 +14,7 @@ function checkIcon(v) { return v === true ? "✅" : v === false ? "❌" : "❓";
 function parseSpreadsheet(text) {
   return text.trim().split("\n").map(line => {
     const parts = line.split(/\t|,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(p => p.trim().replace(/^"|"$/g, ""));
-    return { id: Date.now() + Math.random(), name: parts[0] || "", url: parts[1] || "", email: parts[2] || "" };
+    return { id: Date.now() + Math.random(), name: parts[0] || "", url: parts[1] || "", email: parts[2] || "", firstName: parts[3] || "", lastName: parts[4] || "" };
   }).filter(r => r.name);
 }
 
@@ -36,18 +36,32 @@ Score 1-10 on how much they need this offer:
 - Active business with 10+ reviews = +1 (they care about growth)
 - Obvious funnel gap (no VSL, no qualification, no automation) = +2
 
-problem_angle: 2 sentences MAX. Written from the owner's perspective. What is quietly costing them money right now. Plain language. No jargon. Should sound like a doctor who just reviewed their X-ray. Reference something specific you found about them.
+problem_angle: 2 sentences MAX. Written from the owner's perspective. What is quietly costing them money right now. Plain language. No jargon. No HTML. No citation tags. Should sound like a doctor who just reviewed their X-ray. Reference something specific you found about them.
 
 your_fix: Exactly 3 objects mapping their problem to a specific piece of the offer. Use these tags only: "no dedicated landing page" / "no lead capture system" / "no email sequence" / "no automation in place" / "no VSL" / "no follow-up system" / "no ad funnel" / "no review system". Each action is one short sentence describing what will specifically be built or fixed for them.
 
-opening_line: Write the full outreach message using EXACTLY this script structure. Do not deviate from it:
-"Hey {{first_name}}, I was looking at {{organization_name}} and noticed you might be missing out on leads because of [specific problem found in one short phrase, no em dashes, no long dashes, use plain language only]. I've created a full system that plugs exactly that for businesses like yours. I put together a short demo specifically for {{organization_name}}. Want me to send it over? Takes about 2 minutes to watch."
-Fill in [specific problem] with what you actually found in your research. Use {{first_name}} and {{organization_name}} literally as written. [specific problem] must be specific and real, written as a short phrase with no dashes of any kind. Never use em dashes or long dashes anywhere in the message. Keep everything else word for word.
+opening_line: Write the full cold email using EXACTLY this structure. Do not deviate:
+"Hey [first name: ${lead.firstName || "there"}], I was looking at ${lead.name} and noticed you might be missing out on leads because of [specific problem found in one short phrase, no dashes]. I've created a full system that plugs exactly that for businesses like yours. I put together a short demo specifically for ${lead.name}. Want me to send it over? Takes about 2 minutes to watch."
+Use the actual first name and company name as shown. Fill in [specific problem] with what you found. No em dashes, no long dashes anywhere.
+
+followups: Generate all 5 follow-up emails in full. Use the real name "${lead.firstName || "there"}" and real company "${lead.name}" baked directly into each email. No placeholder tags. No dashes of any kind.
+
+Follow-up 1 (day 3): Subject: "${lead.firstName || "there"}, still worth 2 minutes" | Body: "Wanted to make sure this didn't get buried. Short video showing exactly what [specific problem] is doing to ${lead.name} and what fixes it. No pitch. Want me to send it?"
+
+Follow-up 2 (day 6): Subject: "This is costing you money, ${lead.firstName || "there"}" | Body: "Every week your ads send traffic to a page that wasn't built to convert, the leads that do get through don't hear back in time, and the ones that do aren't even qualified. I built a full system that turns your traffic into booked inspections for ${lead.name}. Two minute video. Want it?"
+
+Follow-up 3 (day 9): Subject: "What roofing companies are missing" | Body: "Most roofing companies I look at have [specific problem] and never realize how much it's costing them. It shows up every time someone clicks an ad or fills out a form and just disappears. Video's ready when you are."
+
+Follow-up 4 (day 12): Subject: "Not a sales pitch" | Body: "I know you're probably getting a lot of these. This isn't a template. I actually looked at ${lead.name} and [specific problem] stood out immediately. The video is two minutes and shows exactly what I found. If it's not relevant, no hard feelings. But if it is, it's worth the two minutes."
+
+Follow-up 5 (day 15): Subject: "Last one, ${lead.firstName || "there"}" | Body: "I won't keep filling your inbox. If the timing's off or it's just not a fit, totally fine. But [specific problem] is still costing you jobs. If you ever want to see what I put together for ${lead.name}, it'll be here. Two minutes. No pressure."
+
+For each follow-up, replace [specific problem] with the actual specific problem you found for this company. Keep everything else word for word.
 
 reviews_detail: Full review breakdown: platform, count, rating, any notable themes in reviews.
 
 Respond ONLY valid JSON no markdown:
-{"score":<1-10>,"verdict":"<PURSUE|MAYBE|SKIP>","running_ads":<true|false|null>,"ads_to_homepage":<true|false|null>,"review_count":"<short e.g. 47 reviews 4.8★>","reviews_detail":"<full breakdown>","follow_up_system":"<visible|weak|none|unknown>","problem_angle":"<2 sentences max>","your_fix":[{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"}],"opening_line":"<2 sentences max>","skip_reason":"<if SKIP else empty>"}`;
+{"score":<1-10>,"verdict":"<PURSUE|MAYBE|SKIP>","running_ads":<true|false|null>,"ads_to_homepage":<true|false|null>,"review_count":"<short e.g. 47 reviews 4.8★>","reviews_detail":"<full breakdown>","follow_up_system":"<visible|weak|none|unknown>","problem_angle":"<2 sentences max>","your_fix":[{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"}],"opening_line":"<full cold email>","followups":[{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"}],"skip_reason":"<if SKIP else empty>"}`;
 
   const res = await fetch("/api/audit", {
     method: "POST",
@@ -479,6 +493,8 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
+  const [firstNameInput, setFirstNameInput] = useState("");
+  const [lastNameInput, setLastNameInput] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [leads, setLeads] = useState([]);
   const [results, setResults] = useState([]);
@@ -545,8 +561,8 @@ export default function App() {
 
   function addLead() {
     if (!nameInput.trim()) return;
-    setLeads(p => [...p, { id: Date.now(), name: nameInput.trim(), url: urlInput.trim(), email: emailInput.trim() }]);
-    setNameInput(""); setUrlInput(""); setEmailInput("");
+    setLeads(p => [...p, { id: Date.now(), name: nameInput.trim(), url: urlInput.trim(), email: emailInput.trim(), firstName: firstNameInput.trim(), lastName: lastNameInput.trim() }]);
+    setNameInput(""); setUrlInput(""); setEmailInput(""); setFirstNameInput(""); setLastNameInput("");
   }
 
   function removeLead(id) { setLeads(p => p.filter(l => l.id !== id)); }
@@ -859,11 +875,11 @@ export default function App() {
 
           {tab === "paste" && (
             <div style={{ marginBottom: 12 }}>
-              <label style={cs.label}>Paste from spreadsheet (Name · URL · Email — one per line)</label>
+              <label style={cs.label}>Paste from spreadsheet (Company · URL · Email · First Name · Last Name — one per line)</label>
               <textarea
                 value={pasteText}
                 onChange={e => setPasteText(e.target.value)}
-                placeholder={"Smith Roofing Co.\tsmithroofing.com\towner@smithroofing.com\nJones Roofing\tjonesroofing.com\towner@jonesroofing.com\n..."}
+                placeholder={"Smith Roofing Co.\tsmithroofing.com\towner@smithroofing.com\tJohn\tSmith\nJones Roofing\tjonesroofing.com\towner@jonesroofing.com\tBob\tJones\n..."}
                 style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, color: COLORS.text, fontFamily: "inherit", fontSize: 12, padding: "10px 12px", outline: "none", resize: "vertical", minHeight: 120, marginBottom: 10 }}
               />
               <button onClick={parsePaste} disabled={!pasteText.trim()} style={{ background: COLORS.accent, color: "#000", border: "none", fontFamily: "inherit", fontWeight: 700, fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", padding: "9px 18px", cursor: pasteText.trim() ? "pointer" : "not-allowed", opacity: pasteText.trim() ? 1 : 0.4 }}>
@@ -909,25 +925,28 @@ export default function App() {
               onClick={() => {
                 const rows = done.filter(e => e.result && e.result.verdict !== "SKIP");
                 if (rows.length === 0) return;
-                const headers = ["email", "subject_line", "specific_problem", "opener", "chain_sentence", "fix_1", "fix_2", "fix_3"];
+                const headers = ["first_name", "last_name", "email", "opener", "followup_1_subject", "followup_1_body", "followup_2_subject", "followup_2_body", "followup_3_subject", "followup_3_body", "followup_4_subject", "followup_4_body", "followup_5_subject", "followup_5_body"];
                 const csv = [
                   headers.join(","),
                   ...rows.map(e => {
                     const r = e.result;
-                    const fixes = r.your_fix || [];
-                    const subjectLine = `Found the leak`;
-                    const rawProblem = r.problem_angle?.split(".")?.[0]?.replace(/^(Right now,?\s*|Currently,?\s*)/i, "").trim() || "";
-                    const problem = rawProblem || fixes[0]?.tag?.toLowerCase() || "gaps in your current funnel";
-                    const chainSentence = buildChainSentence(fixes, e.lead.name);
+                    const stripTags = s => (s || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+                    const followups = r.followups || [];
                     const row = [
+                      e.lead.firstName || "",
+                      e.lead.lastName || "",
                       e.lead.email || "",
-                      subjectLine,
-                      problem,
-                      r.opening_line?.replace(/"/g, '""') || "",
-                      chainSentence.replace(/"/g, '""'),
-                      fixes[0]?.tag || "",
-                      fixes[1]?.tag || "",
-                      fixes[2]?.tag || "",
+                      stripTags(r.opening_line?.replace(/"/g, '""') || ""),
+                      stripTags(followups[0]?.subject?.replace(/"/g, '""') || ""),
+                      stripTags(followups[0]?.body?.replace(/"/g, '""') || ""),
+                      stripTags(followups[1]?.subject?.replace(/"/g, '""') || ""),
+                      stripTags(followups[1]?.body?.replace(/"/g, '""') || ""),
+                      stripTags(followups[2]?.subject?.replace(/"/g, '""') || ""),
+                      stripTags(followups[2]?.body?.replace(/"/g, '""') || ""),
+                      stripTags(followups[3]?.subject?.replace(/"/g, '""') || ""),
+                      stripTags(followups[3]?.body?.replace(/"/g, '""') || ""),
+                      stripTags(followups[4]?.subject?.replace(/"/g, '""') || ""),
+                      stripTags(followups[4]?.body?.replace(/"/g, '""') || ""),
                     ];
                     return row.map(v => `"${v}"`).join(",");
                   })
