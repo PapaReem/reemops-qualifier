@@ -40,28 +40,28 @@ problem_angle: 2 sentences MAX. Written from the owner's perspective. What is qu
 
 your_fix: Exactly 3 objects mapping their problem to a specific piece of the offer. Use these tags only: "no dedicated landing page" / "no lead capture system" / "no email sequence" / "no automation in place" / "no VSL" / "no follow-up system" / "no ad funnel" / "no review system". Each action is one short sentence describing what will specifically be built or fixed for them.
 
-opening_line: Write the full cold email using EXACTLY this structure. Do not deviate:
-"Hey [first name: ${lead.firstName || "there"}], I was looking at ${lead.name} and noticed you might be missing out on leads because of [specific problem found in one short phrase, no dashes]. I've created a full system that plugs exactly that for businesses like yours. I put together a short demo specifically for ${lead.name}. Want me to send it over? Takes about 2 minutes to watch."
-Use the actual first name and company name as shown. Fill in [specific problem] with what you found. No em dashes, no long dashes anywhere.
+opening_line: Write ONLY the body of the cold email, no greeting, no sign-off. Use EXACTLY this structure:
+"I was looking at ${lead.name} and noticed you might be missing out on leads because of [specific problem found in one short phrase, no dashes]. I've created a full system that plugs exactly that for businesses like yours. I put together a short demo specifically for ${lead.name}. Want me to send it over? Takes about 2 minutes to watch."
+Fill in [specific problem] with what you found. No em dashes, no long dashes, no first name, no greeting.
 
-followups: Generate all 5 follow-up emails in full. Use the real name "${lead.firstName || "there"}" and real company "${lead.name}" baked directly into each email. No placeholder tags. No dashes of any kind.
+followups: Generate all 5 follow-up email bodies only. No greetings, no sign-offs, no first name anywhere in the body. Use the real company name "${lead.name}" baked in wherever relevant. No dashes of any kind.
 
-Follow-up 1 (day 3): Subject: "${lead.firstName || "there"}, still worth 2 minutes" | Body: "Wanted to make sure this didn't get buried. Short video showing exactly what [specific problem] is doing to ${lead.name} and what fixes it. No pitch. Want me to send it?"
+Follow-up 1 body (day 3): "Wanted to make sure this didn't get buried. Short video showing exactly what [specific problem] is doing to ${lead.name} and what fixes it. No pitch. Want me to send it?"
 
-Follow-up 2 (day 6): Subject: "This is costing you money, ${lead.firstName || "there"}" | Body: "Every week your ads send traffic to a page that wasn't built to convert, the leads that do get through don't hear back in time, and the ones that do aren't even qualified. I built a full system that turns your traffic into booked inspections for ${lead.name}. Two minute video. Want it?"
+Follow-up 2 body (day 6): "Every week your ads send traffic to a page that wasn't built to convert, the leads that do get through don't hear back in time, and the ones that do aren't even qualified. I built a full system that turns your traffic into booked inspections for ${lead.name}. Two minute video. Want it?"
 
-Follow-up 3 (day 9): Subject: "What roofing companies are missing" | Body: "Most roofing companies I look at have [specific problem] and never realize how much it's costing them. It shows up every time someone clicks an ad or fills out a form and just disappears. Video's ready when you are."
+Follow-up 3 body (day 9): "Most roofing companies I look at have [specific problem] and never realize how much it's costing them. It shows up every time someone clicks an ad or fills out a form and just disappears. Video's ready when you are."
 
-Follow-up 4 (day 12): Subject: "Not a sales pitch" | Body: "I know you're probably getting a lot of these. This isn't a template. I actually looked at ${lead.name} and [specific problem] stood out immediately. The video is two minutes and shows exactly what I found. If it's not relevant, no hard feelings. But if it is, it's worth the two minutes."
+Follow-up 4 body (day 12): "I know you're probably getting a lot of these. This isn't a template. I actually looked at ${lead.name} and [specific problem] stood out immediately. The video is two minutes and shows exactly what I found. If it's not relevant, no hard feelings. But if it is, it's worth the two minutes."
 
-Follow-up 5 (day 15): Subject: "Last one, ${lead.firstName || "there"}" | Body: "I won't keep filling your inbox. If the timing's off or it's just not a fit, totally fine. But [specific problem] is still costing you jobs. If you ever want to see what I put together for ${lead.name}, it'll be here. Two minutes. No pressure."
+Follow-up 5 body (day 15): "I won't keep filling your inbox. If the timing's off or it's just not a fit, totally fine. But [specific problem] is still costing you jobs. If you ever want to see what I put together for ${lead.name}, it'll be here. Two minutes. No pressure."
 
-For each follow-up, replace [specific problem] with the actual specific problem you found for this company. Keep everything else word for word.
+For each follow-up, replace [specific problem] with the actual specific problem found for this company. Keep everything else word for word.
 
 reviews_detail: Full review breakdown: platform, count, rating, any notable themes in reviews.
 
 Respond ONLY valid JSON no markdown:
-{"score":<1-10>,"verdict":"<PURSUE|MAYBE|SKIP>","running_ads":<true|false|null>,"ads_to_homepage":<true|false|null>,"review_count":"<short e.g. 47 reviews 4.8★>","reviews_detail":"<full breakdown>","follow_up_system":"<visible|weak|none|unknown>","problem_angle":"<2 sentences max>","your_fix":[{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"}],"opening_line":"<full cold email>","followups":[{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"},{"subject":"<subject>","body":"<body>"}],"skip_reason":"<if SKIP else empty>"}`;
+{"score":<1-10>,"verdict":"<PURSUE|MAYBE|SKIP>","running_ads":<true|false|null>,"ads_to_homepage":<true|false|null>,"review_count":"<short e.g. 47 reviews 4.8★>","reviews_detail":"<full breakdown>","follow_up_system":"<visible|weak|none|unknown>","problem_angle":"<2 sentences max>","your_fix":[{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"},{"tag":"<tag>","action":"<sentence>"}],"opening_line":"<body only, no greeting>","followups":["<followup 1 body>","<followup 2 body>","<followup 3 body>","<followup 4 body>","<followup 5 body>"],"skip_reason":"<if SKIP else empty>"}`;
 
   const res = await fetch("/api/audit", {
     method: "POST",
@@ -925,7 +925,7 @@ export default function App() {
               onClick={() => {
                 const rows = done.filter(e => e.result && e.result.verdict !== "SKIP");
                 if (rows.length === 0) return;
-                const headers = ["first_name", "last_name", "email", "opener", "followup_1_subject", "followup_1_body", "followup_2_subject", "followup_2_body", "followup_3_subject", "followup_3_body", "followup_4_subject", "followup_4_body", "followup_5_subject", "followup_5_body"];
+                const headers = ["first_name", "last_name", "email", "opener", "followup_1", "followup_2", "followup_3", "followup_4", "followup_5"];
                 const csv = [
                   headers.join(","),
                   ...rows.map(e => {
@@ -937,16 +937,11 @@ export default function App() {
                       e.lead.lastName || "",
                       e.lead.email || "",
                       stripTags(r.opening_line?.replace(/"/g, '""') || ""),
-                      stripTags(followups[0]?.subject?.replace(/"/g, '""') || ""),
-                      stripTags(followups[0]?.body?.replace(/"/g, '""') || ""),
-                      stripTags(followups[1]?.subject?.replace(/"/g, '""') || ""),
-                      stripTags(followups[1]?.body?.replace(/"/g, '""') || ""),
-                      stripTags(followups[2]?.subject?.replace(/"/g, '""') || ""),
-                      stripTags(followups[2]?.body?.replace(/"/g, '""') || ""),
-                      stripTags(followups[3]?.subject?.replace(/"/g, '""') || ""),
-                      stripTags(followups[3]?.body?.replace(/"/g, '""') || ""),
-                      stripTags(followups[4]?.subject?.replace(/"/g, '""') || ""),
-                      stripTags(followups[4]?.body?.replace(/"/g, '""') || ""),
+                      stripTags((typeof followups[0] === "string" ? followups[0] : followups[0]?.body || "").replace(/"/g, '""')),
+                      stripTags((typeof followups[1] === "string" ? followups[1] : followups[1]?.body || "").replace(/"/g, '""')),
+                      stripTags((typeof followups[2] === "string" ? followups[2] : followups[2]?.body || "").replace(/"/g, '""')),
+                      stripTags((typeof followups[3] === "string" ? followups[3] : followups[3]?.body || "").replace(/"/g, '""')),
+                      stripTags((typeof followups[4] === "string" ? followups[4] : followups[4]?.body || "").replace(/"/g, '""')),
                     ];
                     return row.map(v => `"${v}"`).join(",");
                   })
